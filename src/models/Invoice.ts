@@ -2,6 +2,7 @@
  * Interface for an item in the invoice.
  */
 export interface Item {
+    id: string;
     description: string;
     quantity: number;
     price: number;
