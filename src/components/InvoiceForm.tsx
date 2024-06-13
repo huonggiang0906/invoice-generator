@@ -3,89 +3,98 @@ import { uid } from 'uid';
 import InvoiceItem from './InvoiceItem';
 import InvoiceModal from './InvoiceModal';
 import incrementString from '../helpers/incrementString';
-const date = new Date();
-const today = date.toLocaleDateString('en-GB', {
-  month: 'numeric',
-  day: 'numeric',
-  year: 'numeric',
-});
+import { Invoice } from '../models/Invoice';
 
-const InvoiceForm = () => {
-  const [isOpen, setIsOpen] = useState(false);
-  const [discount, setDiscount] = useState('');
-  const [tax, setTax] = useState('');
-  const [invoiceNumber, setInvoiceNumber] = useState(1);
-  const [cashierName, setCashierName] = useState('');
-  const [customerName, setCustomerName] = useState('');
-  const [items, setItems] = useState([
+/**
+ * Functional component representing the invoice form.
+ * @returns {JSX.Element} The rendered invoice form component.
+ */
+const InvoiceForm: React.FC = () => {
+  const [isOpen, setIsOpen] = useState<boolean>(false);
+  const [discount, setDiscount] = useState<string>('');
+  const [tax, setTax] = useState<string>('');
+  const [invoiceNumber, setInvoiceNumber] = useState<number>(1);
+  const [cashierName, setCashierName] = useState<string>('');
+  const [customerName, setCustomerName] = useState<string>('');
+  const [invoice, setInvoice] = useState<Invoice>(new Invoice([
     {
       id: uid(6),
-      name: '',
-      qty: 1,
-      price: '1.00',
+      description: '',
+      quantity: 1,
+      price: 1.00,
     },
-  ]);
+  ]));
 
-  const reviewInvoiceHandler = (event) => {
+  /**
+   * Handle form submission to review the invoice.
+   * @param {React.FormEvent<HTMLFormElement>} event - The form submission event.
+   */
+  const reviewInvoiceHandler = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setIsOpen(true);
   };
 
+  /**
+   * Handle adding the next invoice.
+   * This function increments the invoice number and resets the invoice state with a new invoice.
+   */
   const addNextInvoiceHandler = () => {
-    setInvoiceNumber((prevNumber) => incrementString(prevNumber));
-    setItems([
+    setInvoiceNumber(parseInt(incrementString(invoiceNumber.toString()), 10));
+    setInvoice(new Invoice([
       {
         id: uid(6),
-        name: '',
-        qty: 1,
-        price: '1.00',
+        description: '',
+        quantity: 1,
+        price: 1.00,
       },
-    ]);
+    ]));
   };
 
+  /**
+   * Handle adding a new item to the invoice.
+   * This function creates a new item with default values and adds it to the invoice.
+   */
   const addItemHandler = () => {
     const id = uid(6);
-    setItems((prevItem) => [
-      ...prevItem,
-      {
-        id: id,
-        name: '',
-        qty: 1,
-        price: '1.00',
-      },
-    ]);
+    invoice.addItem({ id, description: '', quantity: 1, price: 1.00 });
+    setInvoice(new Invoice([...invoice.getItems()]));
   };
 
-  const deleteItemHandler = (id) => {
-    setItems((prevItem) => prevItem.filter((item) => item.id !== id));
+  /**
+   * Handle deleting an item from the invoice.
+   * @param {number} index - The index of the item to delete.
+   * This function removes an item from the invoice based on the provided index.
+   */
+  const deleteItemHandler = (index: number) => {
+    invoice.removeItem(index);
+    setInvoice(new Invoice([...invoice.getItems()]));
   };
 
-  const edtiItemHandler = (event) => {
-    const editedItem = {
-      id: event.target.id,
-      name: event.target.name,
-      value: event.target.value,
-    };
+  /**
+   * Handle editing an item in the invoice.
+   * @param {React.ChangeEvent<HTMLInputElement>} event - The change event.
+   * This function updates the item properties based on user input.
+   */
+  const editItemHandler = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const { id, name, value } = event.target;
+    const index = parseInt(id, 10);
+    const items = invoice.getItems();
+    const item = items[index];
 
-    const newItems = items.map((items) => {
-      for (const key in items) {
-        if (key === editedItem.name && items.id === editedItem.id) {
-          items[key] = editedItem.value;
-        }
-      }
-      return items;
-    });
-
-    setItems(newItems);
+    if (name === 'description') {
+      item.description = value;
+    } else if (name === 'quantity') {
+      item.quantity = parseInt(value, 10);
+    } else if (name === 'price') {
+      item.price = parseFloat(value);
+    }
+    setInvoice(new Invoice([...items]));
   };
 
-  const subtotal = items.reduce((prev, curr) => {
-    if (curr.name.trim().length > 0)
-      return prev + Number(curr.price * Math.floor(curr.qty));
-    else return prev;
-  }, 0);
-  const taxRate = (tax * subtotal) / 100;
-  const discountRate = (discount * subtotal) / 100;
+  // Calculate the subtotal, tax rate, discount rate, and total of the invoice
+  const subtotal = invoice.calculateTotal();
+  const taxRate = isNaN(parseFloat(tax)) ? 0 : (parseFloat(tax) * subtotal) / 100;
+  const discountRate = isNaN(parseFloat(discount)) ? 0 : (parseFloat(discount) * subtotal) / 100;
   const total = subtotal - discountRate + taxRate;
 
   return (
@@ -93,11 +102,11 @@ const InvoiceForm = () => {
       className="relative flex flex-col px-2 md:flex-row"
       onSubmit={reviewInvoiceHandler}
     >
-      <div className="my-6 flex-1 space-y-2  rounded-md bg-white p-4 shadow-sm sm:space-y-4 md:p-6">
+      <div className="my-6 flex-1 space-y-2 rounded-md bg-white p-4 shadow-sm sm:space-y-4 md:p-6">
         <div className="flex flex-col justify-between space-y-2 border-b border-gray-900/10 pb-4 md:flex-row md:items-center md:space-y-0">
           <div className="flex space-x-2">
             <span className="font-bold">Current Date: </span>
-            <span>{today}</span>
+            <span>{new Date().toLocaleDateString('en-GB')}</span>
           </div>
           <div className="flex items-center space-x-2">
             <label className="font-bold" htmlFor="invoiceNumber">
@@ -112,7 +121,7 @@ const InvoiceForm = () => {
               min="1"
               step="1"
               value={invoiceNumber}
-              onChange={(event) => setInvoiceNumber(event.target.value)}
+              onChange={(event) => setInvoiceNumber(Number(event.target.value))}
             />
           </div>
         </div>
@@ -161,15 +170,13 @@ const InvoiceForm = () => {
             </tr>
           </thead>
           <tbody>
-            {items.map((item) => (
+            {invoice.getItems().map((item, index) => (
               <InvoiceItem
-                key={item.id}
-                id={item.id}
-                name={item.name}
-                qty={item.qty}
-                price={item.price}
+                key={index}
+                index={index}
+                item={item}
                 onDeleteItem={deleteItemHandler}
-                onEdtiItem={edtiItemHandler}
+                onEditItem={editItemHandler}
               />
             ))}
           </tbody>
@@ -226,7 +233,7 @@ const InvoiceForm = () => {
               discountRate,
               total,
             }}
-            items={items}
+            items={invoice.getItems()}
             onAddNextInvoice={addNextInvoiceHandler}
           />
           <div className="space-y-4 py-2">

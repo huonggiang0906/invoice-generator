@@ -1,6 +1,12 @@
 import React from 'react';
+import { InvoiceFieldProps } from '../models/InvoiceField';
 
-const InvoiceField = ({ onEditItem, cellData }) => {
+/**
+ * Functional component representing an invoice field input.
+ * @param {InvoiceFieldProps} props - The properties for the invoice field.
+ * @returns {JSX.Element} The rendered invoice field input component.
+ */
+const InvoiceField: React.FC<InvoiceFieldProps> = ({ onEditItem, cellData }) => {
   return (
     <input
       className={cellData.className}

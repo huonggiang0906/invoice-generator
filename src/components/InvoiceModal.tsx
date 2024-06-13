@@ -1,84 +1,70 @@
-import React, { Fragment } from 'react';
-import { Dialog, Transition } from '@headlessui/react';
-import { toPng } from 'html-to-image';
-import { jsPDF } from 'jspdf';
+import React, { Fragment } from "react";
+import { Dialog, Transition } from "@headlessui/react";
+import { toPng } from "html-to-image";
+import { jsPDF } from "jspdf";
+import { InvoiceModalProps } from "../models/InvoiceModal";
 
-const InvoiceModal = ({
+/**
+ * Functional component representing the invoice modal.
+ * @param {InvoiceModalProps} props - The properties for the invoice modal.
+ * @returns {JSX.Element} The rendered invoice modal component.
+ */
+const InvoiceModal: React.FC<InvoiceModalProps> = ({
   isOpen,
   setIsOpen,
   invoiceInfo,
   items,
   onAddNextInvoice,
 }) => {
-  function closeModal() {
+  /**
+   * Handle closing the modal.
+   */
+  const closeModal = () => {
     setIsOpen(false);
-  }
+  };
 
+  /**
+   * Handle adding the next invoice.
+   * This function closes the modal and triggers the onAddNextInvoice function.
+   */
   const addNextInvoiceHandler = () => {
     setIsOpen(false);
     onAddNextInvoice();
   };
 
-  const SaveAsPDFHandler = () => {
-    const dom = document.getElementById('print');
-    toPng(dom)
-      .then((dataUrl) => {
-        const img = new Image();
-        img.crossOrigin = 'annoymous';
-        img.src = dataUrl;
-        img.onload = () => {
-          // Initialize the PDF.
-          const pdf = new jsPDF({
-            orientation: 'portrait',
-            unit: 'in',
-            format: [5.5, 8.5],
-          });
+  /**
+   * Handle saving the invoice as a PDF.
+   * This function converts the invoice DOM element to an image and saves it as a PDF.
+   */
+  const saveAsPDFHandler = () => {
+    const dom = document.getElementById("print");
 
-          // Define reused data
-          const imgProps = pdf.getImageProperties(img);
-          const imageType = imgProps.fileType;
-          const pdfWidth = pdf.internal.pageSize.getWidth();
+    if (dom) {
+      toPng(dom)
+        .then((dataUrl) => {
+          const img = new Image();
+          img.crossOrigin = "anonymous";
+          img.src = dataUrl;
+          img.onload = () => {
+            const pdf = new jsPDF({
+              orientation: "portrait",
+              unit: "in",
+              format: [5.5, 8.5],
+            });
+            const imgProps = pdf.getImageProperties(img);
+            const pdfWidth = pdf.internal.pageSize.getWidth();
+            const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
 
-          // Calculate the number of pages.
-          const pxFullHeight = imgProps.height;
-          const pxPageHeight = Math.floor((imgProps.width * 8.5) / 5.5);
-          const nPages = Math.ceil(pxFullHeight / pxPageHeight);
-
-          // Define pageHeight separately so it can be trimmed on the final page.
-          let pageHeight = pdf.internal.pageSize.getHeight();
-
-          // Create a one-page canvas to split up the full image.
-          const pageCanvas = document.createElement('canvas');
-          const pageCtx = pageCanvas.getContext('2d');
-          pageCanvas.width = imgProps.width;
-          pageCanvas.height = pxPageHeight;
-
-          for (let page = 0; page < nPages; page++) {
-            // Trim the final page to reduce file size.
-            if (page === nPages - 1 && pxFullHeight % pxPageHeight !== 0) {
-              pageCanvas.height = pxFullHeight % pxPageHeight;
-              pageHeight = (pageCanvas.height * pdfWidth) / pageCanvas.width;
-            }
-            // Display the page.
-            const w = pageCanvas.width;
-            const h = pageCanvas.height;
-            pageCtx.fillStyle = 'white';
-            pageCtx.fillRect(0, 0, w, h);
-            pageCtx.drawImage(img, 0, page * pxPageHeight, w, h, 0, 0, w, h);
-
-            // Add the page to the PDF.
-            if (page) pdf.addPage();
-
-            const imgData = pageCanvas.toDataURL(`image/${imageType}`, 1);
-            pdf.addImage(imgData, imageType, 0, 0, pdfWidth, pageHeight);
-          }
-          // Output / Save
-          pdf.save(`invoice-${invoiceInfo.invoiceNumber}.pdf`);
-        };
-      })
-      .catch((error) => {
-        console.error('oops, something went wrong!', error);
-      });
+            pdf.addImage(img, 'PNG', 0, 0, pdfWidth, pdfHeight);
+            pdf.save(`invoice-${invoiceInfo.invoiceNumber}.pdf`);
+          };
+        })
+        .catch((error) => {
+          console.error("Failed to convert to PNG:", error);
+        });
+    } else {
+      console.error('The DOM element with id "print" does not exist.');
+    }
   };
 
   return (
@@ -98,7 +84,7 @@ const InvoiceModal = ({
             leaveFrom="opacity-100"
             leaveTo="opacity-0"
           >
-            <Dialog.Overlay className="fixed inset-0 bg-black/50" />
+            <div className="fixed inset-0 bg-black/50" />
           </Transition.Child>
 
           {/* This element is to trick the browser into centering the modal contents. */}
@@ -144,15 +130,15 @@ const InvoiceModal = ({
                     <tbody>
                       {items.map((item) => (
                         <tr key={item.id}>
-                          <td className="w-full">{item.name}</td>
+                          <td className="w-full">{item.description}</td>
                           <td className="min-w-[50px] text-center">
-                            {item.qty}
+                            {item.quantity}
                           </td>
                           <td className="min-w-[80px] text-right">
                             ${Number(item.price).toFixed(2)}
                           </td>
                           <td className="min-w-[90px] text-right">
-                            ${Number(item.price * item.qty).toFixed(2)}
+                            ${(Number(item.price) * item.quantity).toFixed(2)}
                           </td>
                         </tr>
                       ))}
@@ -175,8 +161,7 @@ const InvoiceModal = ({
                     <div className="flex w-full justify-between border-t border-black/10 py-2">
                       <span className="font-bold">Total:</span>
                       <span className="font-bold">
-                        $
-                        {invoiceInfo.total % 1 === 0
+                        ${invoiceInfo.total % 1 === 0
                           ? invoiceInfo.total
                           : invoiceInfo.total.toFixed(2)}
                       </span>
@@ -187,7 +172,7 @@ const InvoiceModal = ({
               <div className="mt-4 flex space-x-2 px-4 pb-6">
                 <button
                   className="flex w-full items-center justify-center space-x-1 rounded-md border border-blue-500 py-2 text-sm text-blue-500 shadow-sm hover:bg-blue-500 hover:text-white"
-                  onClick={SaveAsPDFHandler}
+                  onClick={saveAsPDFHandler}
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"

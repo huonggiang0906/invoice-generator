@@ -1,34 +1,50 @@
 import React from 'react';
 import InvoiceField from './InvoiceField';
+import { InvoiceItemProps } from '../models/InvoiceItem';
 
-const InvoiceItem = ({ id, name, qty, price, onDeleteItem, onEdtiItem }) => {
+/**
+ * Functional component representing an item in the invoice.
+ * @param {InvoiceItemProps} props - The properties for the invoice item.
+ * @returns {JSX.Element} The rendered invoice item component.
+ */
+const InvoiceItem: React.FC<InvoiceItemProps> = ({
+  index,
+  item,
+  onDeleteItem,
+  onEditItem,
+}) => {
+  /**
+   * Handle deleting an item.
+   */
   const deleteItemHandler = () => {
-    onDeleteItem(id);
+    onDeleteItem(index);
   };
 
   return (
     <tr>
       <td className="w-full">
         <InvoiceField
-          onEditItem={(event) => onEdtiItem(event)}
+          onEditItem={onEditItem}
           cellData={{
+            className: 'name',
             placeholder: 'Item name',
             type: 'text',
-            name: 'name',
-            id: id,
-            value: name,
+            name: 'description',
+            id: index.toString(),
+            value: item.description,
           }}
         />
       </td>
       <td className="min-w-[65px] md:min-w-[80px]">
         <InvoiceField
-          onEditItem={(event) => onEdtiItem(event)}
+          onEditItem={onEditItem}
           cellData={{
+            className: 'quantity',
             type: 'number',
             min: '1',
-            name: 'qty',
-            id: id,
-            value: qty,
+            name: 'quantity',
+            id: index.toString(),
+            value: item.quantity.toString(),
           }}
         />
       </td>
@@ -48,15 +64,15 @@ const InvoiceItem = ({ id, name, qty, price, onDeleteItem, onEdtiItem }) => {
           />
         </svg>
         <InvoiceField
-          onEditItem={(event) => onEdtiItem(event)}
+          onEditItem={onEditItem}
           cellData={{
             className: 'text-right',
             type: 'number',
             min: '0.01',
             step: '0.01',
             name: 'price',
-            id: id,
-            value: price,
+            id: index.toString(),
+            value: item.price.toFixed(2).toString(),
           }}
         />
       </td>
